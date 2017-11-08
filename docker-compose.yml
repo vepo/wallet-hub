@@ -1,0 +1,29 @@
+version: "2"
+
+services:
+  log-db:
+    image: mysql
+    container_name: log-db
+    ports:
+      - "3306:3306"
+    expose:
+      - "3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=log-db
+      - MYSQL_USER=log-user
+      - MYSQL_PASSWORD=log-pw
+    volumes:
+      - /srv/docker/mysql:/var/lib/mysql
+    restart: always
+
+  log-migrator:
+    image: vepo/flyway-migrator
+    depends_on:
+      - log-db
+    environment:
+      - DB_URL=mysql://log-db/log-db
+      - DB_USER=log-user
+      - DB_PASSWORD=log-pw
+    volumes:
+      - ./migration-sql:/flyway/sql
