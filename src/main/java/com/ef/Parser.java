@@ -10,34 +10,74 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.hibernate.cfg.NotYetImplementedException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
-import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+import com.ef.db.services.AccessLogService;
 
 /**
- * Hello world!
+ * Process <b>access.log</b> file.
  *
  */
-@Component
+@SpringBootApplication
 public class Parser implements ApplicationRunner {
-	private Date startDate;
-	private Duration duration;
-	private int threshold;
-	private String logFile;
-	private static DateFormat START_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss");
+	private static final DateFormat START_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss");
 
-	private Parser() {
-	}
+	// 2017-01-01 00:01:08.028
+	private static final DateFormat LOG_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+	private static final long ONE_MINUTE_IN_MILLIS = 60000;// millisecs
+
+	@Autowired
+	private AccessLogService accessLogService;
+
+	private Date startDate;
+
+	private Duration duration;
+
+	private int threshold;
+
+	private String logFile = "access.log"; // FIXME: It can be an application parameter
 
 	public void run(ApplicationArguments args) {
 		processParameters(args);
 		processFile();
+		processBlocked();
+	}
+
+	private void processBlocked() {
+		Date endDate;
+		switch (duration) {
+		case DAILY:
+			endDate = new Date(startDate.getTime() + (60 * 24 * ONE_MINUTE_IN_MILLIS));
+			break;
+		case HOURLY:
+			endDate = new Date(startDate.getTime() + (60 * ONE_MINUTE_IN_MILLIS));
+			break;
+		default:
+			throw new NotYetImplementedException("Duration not implemented: " + duration);
+		}
+		accessLogService.createBlockedIPs(startDate, endDate, threshold);
 	}
 
 	private void processFile() {
 		try (Stream<String> stream = Files.lines(Paths.get(logFile))) {
-			stream.forEach(System.out::println);
+			stream.map(line -> line.split("\\|")).forEach(values -> {
+				try {
+					accessLogService.register(LOG_DATE_FORMAT.parse(values[0]), values[1], values[2],
+							Integer.parseInt(values[3]), values[4]);
+				} catch (NumberFormatException e) {
+					System.err.println("Invalid response code \"" + values[3] + "\". Ignoring line.");
+					e.printStackTrace();
+				} catch (ParseException e) {
+					System.err.println("Invalid date \"" + values[0] + "\". Ignoring line.");
+					e.printStackTrace();
+				}
+			});
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -83,7 +123,6 @@ public class Parser implements ApplicationRunner {
 			}
 		}
 
-		logFile = "access.log";
 	}
 
 	public static void main(String[] args) throws Exception {
