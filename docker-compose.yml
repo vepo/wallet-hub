@@ -14,7 +14,7 @@ services:
       - MYSQL_USER=log-user
       - MYSQL_PASSWORD=log-pw
     volumes:
-      - /srv/docker/mysql:/var/lib/mysql
+      - ./db_data:/var/lib/mysql
     restart: always
 
   log-migrator:

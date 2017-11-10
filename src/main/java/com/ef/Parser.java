@@ -8,6 +8,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.stream.Stream;
 
 import org.hibernate.cfg.NotYetImplementedException;
@@ -17,11 +18,14 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import com.ef.db.RollbackException;
 import com.ef.db.services.AccessLogService;
 
 /**
- * Process <b>access.log</b> file.
+ * Command line application for processing the <b>access.log</b> file and block
+ * IP that exceeds a given number of requests.
  *
+ * @author <a href="mailto:victor.perticarrari@gmail.com">Victor Osório</a>
  */
 @SpringBootApplication
 public class Parser implements ApplicationRunner {
@@ -29,6 +33,14 @@ public class Parser implements ApplicationRunner {
 
 	// 2017-01-01 00:01:08.028
 	private static final DateFormat LOG_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+	/*
+	 * We should set the timezone to UTC.
+	 */
+	static {
+		START_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+		LOG_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+	}
 
 	private static final long ONE_MINUTE_IN_MILLIS = 60000;// millisecs
 
@@ -72,10 +84,10 @@ public class Parser implements ApplicationRunner {
 							Integer.parseInt(values[3]), values[4]);
 				} catch (NumberFormatException e) {
 					System.err.println("Invalid response code \"" + values[3] + "\". Ignoring line.");
-					e.printStackTrace();
 				} catch (ParseException e) {
 					System.err.println("Invalid date \"" + values[0] + "\". Ignoring line.");
-					e.printStackTrace();
+				} catch (RollbackException e) {
+					System.err.println("Line already processed! Ignoring line.");
 				}
 			});
 		} catch (IOException e) {
@@ -84,6 +96,11 @@ public class Parser implements ApplicationRunner {
 	}
 
 	private void processParameters(ApplicationArguments args) {
+		if (args.containsOption("help")) {
+			printUsage();
+			System.exit(0);
+		}
+
 		List<String> startDates = args.getOptionValues("startDate");
 		if (startDates == null || startDates.isEmpty()) {
 			System.err.println("Argument startDate is required!");
@@ -122,6 +139,16 @@ public class Parser implements ApplicationRunner {
 				System.exit(1);
 			}
 		}
+
+	}
+
+	private void printUsage() {
+		System.out.println("Process \"access.log\" file and add IPs to blocked list.\n"
+				+ "Usage: java -cp \"parser.jar\" com.ef.Parser --startDate=2017-01-01.13:00:00 --duration=hourly --threshold=100\n\n"
+				+ "Arguments:\n"
+				+ "\tstartDate    Time that the parser will check for blocked ips\n"
+				+ "\tduration     The window of check. Accepts: \"hourly\", \"daily\"\n"
+				+ "\tthreshold:   The minimum number of request for block an IP");
 
 	}
 

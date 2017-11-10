@@ -24,6 +24,7 @@ import org.springframework.util.StringUtils;
 import com.ef.db.AccessLogRepository;
 import com.ef.db.AgentRepository;
 import com.ef.db.BlockedIPRepository;
+import com.ef.db.RollbackException;
 import com.ef.domain.AccessLog;
 import com.ef.domain.Agent;
 import com.ef.domain.BlockedIP;
@@ -45,10 +46,16 @@ public class AccessLogService {
 	private Map<String, Long> cache = new HashMap<>();
 
 	/**
+	 * 
 	 * <pre>
 	 * real	103m29.033s
 	 * user	1m1.072s
 	 * sys	0m19.144s
+	 * 
+	 * real	107m50.041s
+	 * user	1m3.896s
+	 * sys	0m16.200s
+	 * 
 	 * </pre>
 	 * 
 	 * @param time
@@ -57,7 +64,8 @@ public class AccessLogService {
 	 * @param responseCode
 	 * @param agentDescription
 	 */
-	public void register(Date time, String ip, String request, Integer responseCode, String agentDescription) {
+	public void registerWithoutHibernate(Date time, String ip, String request, Integer responseCode,
+			String agentDescription) {
 		try (Connection conn = dataSource.getConnection();
 				PreparedStatement statement = conn.prepareStatement(
 						"INSERT INTO log_access (`time`, `ip`, `request`, `response_code`, `agent_id`) VALUES (?, ?, ?, ?, ?)");) {
@@ -67,7 +75,6 @@ public class AccessLogService {
 			statement.setInt(4, responseCode);
 			statement.setLong(5, getAgentId(agentDescription, conn));
 			statement.executeUpdate();
-
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -110,10 +117,11 @@ public class AccessLogService {
 	 * @param request
 	 * @param responseCode
 	 * @param agentDescription
+	 * @throws RollbackException
 	 */
-	@Transactional(isolation = Isolation.READ_COMMITTED, propagation = Propagation.REQUIRES_NEW)
-	public synchronized void registerJPA(Date time, String ip, String request, Integer responseCode,
-			String agentDescription) {
+	@Transactional(isolation = Isolation.READ_COMMITTED, propagation = Propagation.REQUIRES_NEW, rollbackFor = RollbackException.class)
+	public synchronized void register(Date time, String ip, String request, Integer responseCode,
+			String agentDescription) throws RollbackException {
 		try {
 			AccessLog logInfo = new AccessLog(time, ip, request, responseCode);
 			if (!StringUtils.isEmpty(agentDescription)) {
@@ -126,7 +134,7 @@ public class AccessLogService {
 			}
 			accessLogRepository.saveAndFlush(logInfo);
 		} catch (DataIntegrityViolationException e) {
-			System.err.println("Line already processed! Ignoring line.");
+			throw new RollbackException(e);
 		}
 	}
 
