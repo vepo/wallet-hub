@@ -18,8 +18,9 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import com.ef.db.RollbackException;
+import com.ef.db.exception.RollbackException;
 import com.ef.db.services.AccessLogService;
+import com.ef.params.Duration;
 
 /**
  * Command line application for processing the <b>access.log</b> file and block
@@ -55,12 +56,18 @@ public class Parser implements ApplicationRunner {
 
 	private String logFile = "access.log"; // FIXME: It can be an application parameter
 
+	/**
+	 * Execute application
+	 */
 	public void run(ApplicationArguments args) {
 		processParameters(args);
 		processFile();
 		processBlocked();
 	}
 
+	/**
+	 * Create blocked IPs
+	 */
 	private void processBlocked() {
 		Date endDate;
 		switch (duration) {
@@ -76,6 +83,9 @@ public class Parser implements ApplicationRunner {
 		accessLogService.createBlockedIPs(startDate, endDate, threshold);
 	}
 
+	/**
+	 * Process Log File creating one database registry for each line
+	 */
 	private void processFile() {
 		try (Stream<String> stream = Files.lines(Paths.get(logFile))) {
 			stream.map(line -> line.split("\\|")).forEach(values -> {
@@ -95,6 +105,12 @@ public class Parser implements ApplicationRunner {
 		}
 	}
 
+	/**
+	 * Extract parameters
+	 * 
+	 * @param args
+	 *            Application arguments
+	 */
 	private void processParameters(ApplicationArguments args) {
 		if (args.containsOption("help")) {
 			printUsage();
@@ -104,12 +120,14 @@ public class Parser implements ApplicationRunner {
 		List<String> startDates = args.getOptionValues("startDate");
 		if (startDates == null || startDates.isEmpty()) {
 			System.err.println("Argument startDate is required!");
+			printUsage();
 			System.exit(1);
 		} else {
 			try {
 				startDate = START_DATE_FORMAT.parse(startDates.get(0));
 			} catch (ParseException e) {
 				System.err.println("Argument startDate value is invalid!");
+				printUsage();
 				System.exit(1);
 			}
 		}
@@ -117,12 +135,14 @@ public class Parser implements ApplicationRunner {
 		List<String> durations = args.getOptionValues("duration");
 		if (durations == null || durations.isEmpty()) {
 			System.err.println("Argument duration is required!");
+			printUsage();
 			System.exit(1);
 		} else {
 			try {
 				duration = Duration.valueOf(durations.get(0).toUpperCase());
 			} catch (IllegalArgumentException e) {
 				System.err.println("Argument duration value is invalid!");
+				printUsage();
 				System.exit(1);
 			}
 		}
@@ -130,23 +150,27 @@ public class Parser implements ApplicationRunner {
 		List<String> thresholds = args.getOptionValues("threshold");
 		if (thresholds == null || thresholds.isEmpty()) {
 			System.err.println("Argument threshold is required!");
+			printUsage();
 			System.exit(1);
 		} else {
 			try {
 				threshold = Integer.valueOf(thresholds.get(0));
 			} catch (NumberFormatException e) {
 				System.err.println("Argument threshold value is invalid!");
+				printUsage();
 				System.exit(1);
 			}
 		}
 
 	}
 
+	/**
+	 * Print usage
+	 */
 	private void printUsage() {
 		System.out.println("Process \"access.log\" file and add IPs to blocked list.\n"
 				+ "Usage: java -cp \"parser.jar\" com.ef.Parser --startDate=2017-01-01.13:00:00 --duration=hourly --threshold=100\n\n"
-				+ "Arguments:\n"
-				+ "\tstartDate    Time that the parser will check for blocked ips\n"
+				+ "Arguments:\n" + "\tstartDate    Time that the parser will check for blocked ips\n"
 				+ "\tduration     The window of check. Accepts: \"hourly\", \"daily\"\n"
 				+ "\tthreshold:   The minimum number of request for block an IP");
 

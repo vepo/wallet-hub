@@ -17,6 +17,12 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Access Log Entry
+ * 
+ * @author victor
+ *
+ */
 @Entity
 @Data
 @NoArgsConstructor

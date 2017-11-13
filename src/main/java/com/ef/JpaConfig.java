@@ -23,6 +23,12 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import com.ef.utils.StringUtils;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 
+/**
+ * JPA Configuration
+ * 
+ * @author victor
+ *
+ */
 @Configuration
 @EnableTransactionManagement
 @EnableJpaRepositories(basePackages = "com.ef.db")

@@ -18,6 +18,7 @@ services:
     restart: always
 
   log-migrator:
+    container_name: log-db-migrator
     image: vepo/flyway-migrator
     depends_on:
       - log-db

@@ -1,7 +1,14 @@
-package com.ef.db;
+package com.ef.db.exception;
 
 import org.springframework.dao.DataIntegrityViolationException;
 
+/**
+ * Rollback exceptions. This exception means that the transaction will not be
+ * commited.
+ * 
+ * @author victor
+ *
+ */
 public class RollbackException extends Exception {
 
 	/**

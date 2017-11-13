@@ -12,6 +12,12 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * HTTP Agent
+ * 
+ * @author victor
+ *
+ */
 @Entity
 @Data
 @NoArgsConstructor

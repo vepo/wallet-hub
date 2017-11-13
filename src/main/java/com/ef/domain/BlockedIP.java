@@ -11,6 +11,12 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Blocked IP
+ * 
+ * @author victor
+ *
+ */
 @Entity
 @Data
 @NoArgsConstructor

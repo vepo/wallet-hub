@@ -24,13 +24,20 @@ import org.springframework.util.StringUtils;
 import com.ef.db.AccessLogRepository;
 import com.ef.db.AgentRepository;
 import com.ef.db.BlockedIPRepository;
-import com.ef.db.RollbackException;
+import com.ef.db.exception.RollbackException;
 import com.ef.domain.AccessLog;
 import com.ef.domain.Agent;
 import com.ef.domain.BlockedIP;
 
+/**
+ * Access Log Business rules
+ * 
+ * @author victor
+ *
+ */
 @Service
 public class AccessLogService {
+
 	@Autowired
 	private AgentRepository agentRepository;
 
@@ -46,23 +53,35 @@ public class AccessLogService {
 	private Map<String, Long> cache = new HashMap<>();
 
 	/**
+	 * Register log without Hibernate. Using this method we can register faster than
+	 * using {@link #register(Date, String, String, Integer, String)}.
+	 * 
+	 * <p>
+	 * Execution times:
 	 * 
 	 * <pre>
 	 * real	103m29.033s
 	 * user	1m1.072s
 	 * sys	0m19.144s
+	 * </pre>
 	 * 
+	 * <pre>
 	 * real	107m50.041s
 	 * user	1m3.896s
 	 * sys	0m16.200s
-	 * 
 	 * </pre>
+	 * </p>
 	 * 
 	 * @param time
+	 *            log time
 	 * @param ip
+	 *            log IP
 	 * @param request
+	 *            HTTP request URL
 	 * @param responseCode
+	 *            HTTP response code
 	 * @param agentDescription
+	 *            HTTP agent
 	 */
 	public void registerWithoutHibernate(Date time, String ip, String request, Integer responseCode,
 			String agentDescription) {
@@ -75,11 +94,21 @@ public class AccessLogService {
 			statement.setInt(4, responseCode);
 			statement.setLong(5, getAgentId(agentDescription, conn));
 			statement.executeUpdate();
+		} catch (SQLIntegrityConstraintViolationException e) {
+			System.err.println("Line already processed! Ignoring line.");
 		} catch (SQLException e) {
-			e.printStackTrace();
+			System.err.println("Error saving log data!");
 		}
 	}
 
+	/**
+	 * Get Agent Id for description
+	 * 
+	 * @param agentDescription
+	 * @param conn
+	 * @return
+	 * @throws SQLException
+	 */
 	private Long getAgentId(String agentDescription, Connection conn) throws SQLException {
 		if (!cache.containsKey(agentDescription)) {
 			try (PreparedStatement existentAgent = conn
@@ -98,19 +127,24 @@ public class AccessLogService {
 						cache.put(agentDescription, tableKeys.getLong(1));
 					}
 				}
-			} catch (SQLIntegrityConstraintViolationException e) {
-				System.err.println("Line already processed! Ignoring line.");
 			}
 		}
 		return cache.get(agentDescription);
 	}
 
 	/**
+	 * Register log using Hibernate. This methos is 7% slower than
+	 * {@link #registerWithoutHibernate(Date, String, String, Integer, String)}
+	 * 
+	 * <p>
+	 * Execution time:
+	 * 
 	 * <pre>
-	 *  real	111m34.630s
-	 * 	user	2m43.636s
-	 * 	sys	0m58.872s
+	 * real	111m34.630s
+	 * user	2m43.636s
+	 * sys	0m58.872s
 	 * </pre>
+	 * </p>
 	 * 
 	 * @param time
 	 * @param ip
@@ -120,8 +154,8 @@ public class AccessLogService {
 	 * @throws RollbackException
 	 */
 	@Transactional(isolation = Isolation.READ_COMMITTED, propagation = Propagation.REQUIRES_NEW, rollbackFor = RollbackException.class)
-	public synchronized void register(Date time, String ip, String request, Integer responseCode,
-			String agentDescription) throws RollbackException {
+	public void register(Date time, String ip, String request, Integer responseCode, String agentDescription)
+			throws RollbackException {
 		try {
 			AccessLog logInfo = new AccessLog(time, ip, request, responseCode);
 			if (!StringUtils.isEmpty(agentDescription)) {
@@ -138,6 +172,16 @@ public class AccessLogService {
 		}
 	}
 
+	/**
+	 * Block IP according with parameters
+	 * 
+	 * @param startDate
+	 *            The time window start end
+	 * @param endDate
+	 *            The time window start
+	 * @param threshold
+	 *            The minimum request for blocking
+	 */
 	public void createBlockedIPs(Date startDate, Date endDate, int threshold) {
 		accessLogRepository.getBlockedIP(startDate, endDate, (long) threshold).forEach(ip -> {
 			try {

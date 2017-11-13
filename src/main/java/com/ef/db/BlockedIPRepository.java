@@ -5,6 +5,12 @@ import org.springframework.stereotype.Repository;
 
 import com.ef.domain.BlockedIP;
 
+/**
+ * BlockedIP Repository
+ * 
+ * @author victor
+ *
+ */
 @Repository
 public interface BlockedIPRepository extends JpaRepository<BlockedIP, Long> {
 
