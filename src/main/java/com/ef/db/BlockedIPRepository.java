@@ -19,7 +19,7 @@ public class BlockedIPRepository extends AbstractRepository {
 	 *             Couldn't add the ip. It already exist into database
 	 */
 	public Long insert(String ip) throws RollbackException {
-		return executeInsert("INSERT INTO blocked_ip (ip) VALUES (?)", statement -> statement.setString(1, ip));
+		return executeInsert("INSERT INTO ip_blocked (ip) VALUES (?)", statement -> statement.setString(1, ip));
 	}
 
 }

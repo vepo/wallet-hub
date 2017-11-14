@@ -17,6 +17,16 @@ import com.ef.params.Duration;
 /**
  * Command line application for processing the <b>access.log</b> file and block
  * IP that exceeds a given number of requests.
+ * 
+ * <p>
+ * The execution take a long time. For a file with 116484 entries, it takes:
+ * 
+ * <pre>
+ * real	105m14.757s
+ * user	0m37.668s
+ * sys	0m18.568s
+ * </pre>
+ * </p>
  *
  * @author <a href="mailto:victor.perticarrari@gmail.com">Victor Osório</a>
  */
@@ -74,7 +84,7 @@ public class Parser {
 			endDate = null;
 			break;
 		}
-		
+
 		if (endDate == null) {
 			System.err.println("Invalid Duration: " + duration);
 			printUsage();

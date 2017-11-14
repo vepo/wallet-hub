@@ -16,7 +16,7 @@ CREATE TABLE log_access (
 	FOREIGN KEY (`agent_id`) REFERENCES `agent`(`id`) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
-CREATE TABLE blocked_ip (
+CREATE TABLE ip_blocked (
 	`id` SERIAL,
 	`ip` VARCHAR(15) NOT NULL,
 	PRIMARY KEY(`id`),
