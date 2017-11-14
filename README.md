@@ -4,6 +4,8 @@ Log Parser
 Parse the **access.log** file, fill a database and block IPs.
 This implementation follow [this requirements](Java_MySQL_Test_Instructions.md).
 
+*All the script were test **only** into a ubuntu 16.04 machine.*
+
 # Table of Contents
 
    * [Dependencies](#dependencies)
@@ -58,6 +60,20 @@ java -cp "parser.jar" com.ef.Parser --accesslog=access.log --startDate=2017-01-0
 The command is a little different from the specification. We just execute as an executable jar.
 
 # Database
+
+## Accessing
+
+To access the database, use the following credentials
+
+* **user**: log-user
+* **password**: log-pw
+* **database**: log-db
+
+Or just execute a script:
+
+```
+./access-db.sh
+```
 
 ## Schema
 
