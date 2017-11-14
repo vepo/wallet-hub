@@ -1,11 +1,6 @@
 package com.ef.db;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-
-import com.ef.domain.Agent;
+import com.ef.db.exception.RollbackException;
 
 /**
  * Repository for Agent
@@ -13,14 +8,32 @@ import com.ef.domain.Agent;
  * @author victor
  *
  */
-@Repository
-public interface AgentRepository extends JpaRepository<Agent, Long> {
+public class AgentRepository extends AbstractRepository {
 	/**
-	 * Retrieve an Agent with the description
+	 * Find Agent id by descriotion
 	 * 
-	 * @param desc
-	 * @return
+	 * @param agentDescription
+	 *            the agent description
+	 * @return the agent id
 	 */
-	@Query(value = "SELECT agent from Agent agent WHERE agent.description = :desc")
-	public Agent find(@Param("desc") String desc);
+	public Long findIdByDescription(String agentDescription) {
+		return executeQuery("SELECT `id` FROM agent WHERE `description`= ?",
+				statement -> statement.setString(1, agentDescription),
+				resultSet -> resultSet.next() ? resultSet.getLong(1) : null);
+	}
+
+	/**
+	 * Insert agent
+	 * 
+	 * @param agentDescription
+	 *            the agent description
+	 * @return the agent id
+	 * @throws RollbackException
+	 *             Couldn't add the agent
+	 */
+	public Long insert(String agentDescription) throws RollbackException {
+		return executeInsert("INSERT INTO agent (`description`) VALUES (?)", statement -> {
+			statement.setString(1, agentDescription);
+		});
+	}
 }

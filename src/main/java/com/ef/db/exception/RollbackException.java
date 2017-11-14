@@ -1,6 +1,6 @@
 package com.ef.db.exception;
 
-import org.springframework.dao.DataIntegrityViolationException;
+import java.sql.SQLIntegrityConstraintViolationException;
 
 /**
  * Rollback exceptions. This exception means that the transaction will not be
@@ -16,7 +16,7 @@ public class RollbackException extends Exception {
 	 */
 	private static final long serialVersionUID = 1668135233134864800L;
 
-	public RollbackException(DataIntegrityViolationException e) {
+	public RollbackException(SQLIntegrityConstraintViolationException e) {
 		super(e);
 	}
 }

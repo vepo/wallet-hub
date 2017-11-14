@@ -1,5 +1,6 @@
 package com.ef;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -7,18 +8,9 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 
-import org.hibernate.cfg.NotYetImplementedException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import com.ef.db.exception.RollbackException;
 import com.ef.db.services.AccessLogService;
 import com.ef.params.Duration;
 
@@ -28,8 +20,7 @@ import com.ef.params.Duration;
  *
  * @author <a href="mailto:victor.perticarrari@gmail.com">Victor Osório</a>
  */
-@SpringBootApplication
-public class Parser implements ApplicationRunner {
+public class Parser {
 	private static final DateFormat START_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss");
 
 	// 2017-01-01 00:01:08.028
@@ -43,10 +34,9 @@ public class Parser implements ApplicationRunner {
 		LOG_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 
-	private static final long ONE_MINUTE_IN_MILLIS = 60000;// millisecs
+	private static final long ONE_MINUTE_IN_MILLIS = 60000;// milliseconds
 
-	@Autowired
-	private AccessLogService accessLogService;
+	private AccessLogService accessLogService = new AccessLogService();
 
 	private Date startDate;
 
@@ -54,13 +44,16 @@ public class Parser implements ApplicationRunner {
 
 	private int threshold;
 
-	private String logFile = "access.log"; // FIXME: It can be an application parameter
+	private String logFile = "access.log";
+
+	public Parser(String[] args) {
+		processParameters(args);
+	}
 
 	/**
 	 * Execute application
 	 */
-	public void run(ApplicationArguments args) {
-		processParameters(args);
+	public void run() {
 		processFile();
 		processBlocked();
 	}
@@ -78,7 +71,14 @@ public class Parser implements ApplicationRunner {
 			endDate = new Date(startDate.getTime() + (60 * ONE_MINUTE_IN_MILLIS));
 			break;
 		default:
-			throw new NotYetImplementedException("Duration not implemented: " + duration);
+			endDate = null;
+			break;
+		}
+		
+		if (endDate == null) {
+			System.err.println("Invalid Duration: " + duration);
+			printUsage();
+			System.exit(1);
 		}
 		accessLogService.createBlockedIPs(startDate, endDate, threshold);
 	}
@@ -92,16 +92,17 @@ public class Parser implements ApplicationRunner {
 				try {
 					accessLogService.register(LOG_DATE_FORMAT.parse(values[0]), values[1], values[2],
 							Integer.parseInt(values[3]), values[4]);
+					// System.out.print("\u001B[2K\rProcessando: " + values[0]);
 				} catch (NumberFormatException e) {
 					System.err.println("Invalid response code \"" + values[3] + "\". Ignoring line.");
 				} catch (ParseException e) {
 					System.err.println("Invalid date \"" + values[0] + "\". Ignoring line.");
-				} catch (RollbackException e) {
-					System.err.println("Line already processed! Ignoring line.");
 				}
 			});
 		} catch (IOException e) {
-			e.printStackTrace();
+			System.err.println("Couldn't open access log file: " + this.logFile);
+			printUsage();
+			System.exit(1);
 		}
 	}
 
@@ -111,57 +112,67 @@ public class Parser implements ApplicationRunner {
 	 * @param args
 	 *            Application arguments
 	 */
-	private void processParameters(ApplicationArguments args) {
-		if (args.containsOption("help")) {
-			printUsage();
-			System.exit(0);
-		}
-
-		List<String> startDates = args.getOptionValues("startDate");
-		if (startDates == null || startDates.isEmpty()) {
-			System.err.println("Argument startDate is required!");
-			printUsage();
-			System.exit(1);
-		} else {
-			try {
-				startDate = START_DATE_FORMAT.parse(startDates.get(0));
-			} catch (ParseException e) {
-				System.err.println("Argument startDate value is invalid!");
+	private void processParameters(String[] args) {
+		for (String arg : args) {
+			if (arg.equals("--help")) {
 				printUsage();
-				System.exit(1);
+				System.exit(0);
+			} else if (arg.startsWith("--startDate=")) {
+				String startDate = arg.replace("--startDate=", "");
+				if (startDate.isEmpty()) {
+					System.err.println("Argument startDate is required!");
+					printUsage();
+					System.exit(1);
+				} else {
+					try {
+						this.startDate = START_DATE_FORMAT.parse(startDate);
+					} catch (ParseException e) {
+						System.err.println("Argument startDate value is invalid!");
+						printUsage();
+						System.exit(1);
+					}
+				}
+			} else if (arg.startsWith("--duration=")) {
+				String duration = arg.replace("--duration=", "");
+				if (duration.isEmpty()) {
+					System.err.println("Argument duration is required!");
+					printUsage();
+					System.exit(1);
+				} else {
+					try {
+						this.duration = Duration.valueOf(duration.toUpperCase());
+					} catch (IllegalArgumentException e) {
+						System.err.println("Argument duration value is invalid!");
+						printUsage();
+						System.exit(1);
+					}
+				}
+			} else if (arg.startsWith("--threshold=")) {
+				String threshold = arg.replace("--threshold=", "");
+				if (threshold.isEmpty()) {
+					System.err.println("Argument threshold is required!");
+					printUsage();
+					System.exit(1);
+				} else {
+					try {
+						this.threshold = Integer.valueOf(threshold);
+					} catch (NumberFormatException e) {
+						System.err.println("Argument threshold value is invalid!");
+						printUsage();
+						System.exit(1);
+					}
+				}
+			} else if (arg.startsWith("--accesslog=")) {
+				File accesslog = Paths.get(arg.replace("--accesslog=", "")).toFile();
+				if (!accesslog.exists() || !accesslog.isFile()) {
+					System.err.println("accesslog is not a valid file!");
+					printUsage();
+					System.exit(1);
+				} else {
+					this.logFile = accesslog.getAbsolutePath();
+				}
 			}
 		}
-
-		List<String> durations = args.getOptionValues("duration");
-		if (durations == null || durations.isEmpty()) {
-			System.err.println("Argument duration is required!");
-			printUsage();
-			System.exit(1);
-		} else {
-			try {
-				duration = Duration.valueOf(durations.get(0).toUpperCase());
-			} catch (IllegalArgumentException e) {
-				System.err.println("Argument duration value is invalid!");
-				printUsage();
-				System.exit(1);
-			}
-		}
-
-		List<String> thresholds = args.getOptionValues("threshold");
-		if (thresholds == null || thresholds.isEmpty()) {
-			System.err.println("Argument threshold is required!");
-			printUsage();
-			System.exit(1);
-		} else {
-			try {
-				threshold = Integer.valueOf(thresholds.get(0));
-			} catch (NumberFormatException e) {
-				System.err.println("Argument threshold value is invalid!");
-				printUsage();
-				System.exit(1);
-			}
-		}
-
 	}
 
 	/**
@@ -170,13 +181,16 @@ public class Parser implements ApplicationRunner {
 	private void printUsage() {
 		System.out.println("Process \"access.log\" file and add IPs to blocked list.\n"
 				+ "Usage: java -cp \"parser.jar\" com.ef.Parser --startDate=2017-01-01.13:00:00 --duration=hourly --threshold=100\n\n"
-				+ "Arguments:\n" + "\tstartDate    Time that the parser will check for blocked ips\n"
-				+ "\tduration     The window of check. Accepts: \"hourly\", \"daily\"\n"
-				+ "\tthreshold:   The minimum number of request for block an IP");
+				+ "Arguments:\n"
+				+ "\t--startDate=DATE        Time that the parser will check for blocked ips. Use date format \"yyyy-MM-dd.HH:mm:ss\"\n"
+				+ "\t--duration=DURATION     The window of check. Accepts: \"hourly\" or \"daily\"\n"
+				+ "\t--accesslog=FILE        The access log file. The default value is \"access.log\"\n"
+				+ "\t--threshold=THRESHOLD   The minimum number of request for block an IP");
 
 	}
 
 	public static void main(String[] args) throws Exception {
-		SpringApplication.run(Parser.class, args);
+		Parser parser = new Parser(args);
+		parser.run();
 	}
 }

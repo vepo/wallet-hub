@@ -1,9 +1,6 @@
 package com.ef.db;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
-import com.ef.domain.BlockedIP;
+import com.ef.db.exception.RollbackException;
 
 /**
  * BlockedIP Repository
@@ -11,7 +8,18 @@ import com.ef.domain.BlockedIP;
  * @author victor
  *
  */
-@Repository
-public interface BlockedIPRepository extends JpaRepository<BlockedIP, Long> {
+public class BlockedIPRepository extends AbstractRepository {
+	/**
+	 * Insert blocked ip
+	 * 
+	 * @param ip
+	 *            The ip to be blocked
+	 * @return the blocked instance id
+	 * @throws RollbackException
+	 *             Couldn't add the ip. It already exist into database
+	 */
+	public Long insert(String ip) throws RollbackException {
+		return executeInsert("INSERT INTO blocked_ip (ip) VALUES (?)", statement -> statement.setString(1, ip));
+	}
 
 }
