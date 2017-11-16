@@ -1,6 +1,6 @@
 package com.ef.db;
 
-import com.ef.db.exception.RollbackException;
+import org.hibernate.Session;
 
 /**
  * BlockedIP Repository
@@ -9,17 +9,9 @@ import com.ef.db.exception.RollbackException;
  *
  */
 public class BlockedIPRepository extends AbstractRepository {
-	/**
-	 * Insert blocked ip
-	 * 
-	 * @param ip
-	 *            The ip to be blocked
-	 * @return the blocked instance id
-	 * @throws RollbackException
-	 *             Couldn't add the ip. It already exist into database
-	 */
-	public Long insert(String ip) throws RollbackException {
-		return executeInsert("INSERT INTO ip_blocked (ip) VALUES (?)", statement -> statement.setString(1, ip));
+
+	public BlockedIPRepository(Session session) {
+		super(session);
 	}
 
 }

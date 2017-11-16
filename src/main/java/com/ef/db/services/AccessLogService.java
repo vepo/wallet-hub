@@ -1,14 +1,23 @@
 package com.ef.db.services;
 
-import java.sql.SQLException;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.Optional;
+
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.ef.db.AccessLogRepository;
 import com.ef.db.AgentRepository;
 import com.ef.db.BlockedIPRepository;
 import com.ef.db.exception.RollbackException;
+import com.ef.db.hibernate.HibernateUtil;
+import com.ef.domain.AccessLog;
+import com.ef.domain.Agent;
+import com.ef.domain.BlockedIP;
+import com.ef.utils.StringUtils;
 
 /**
  * Access Log Business rules
@@ -18,16 +27,7 @@ import com.ef.db.exception.RollbackException;
  */
 public class AccessLogService {
 
-	private AgentRepository agentRepository = new AgentRepository();
-
-	private AccessLogRepository accessLogRepository = new AccessLogRepository();
-
-	private BlockedIPRepository blockedIPRepository = new BlockedIPRepository();
-
-	/**
-	 * Agent cache
-	 */
-	private Map<String, Long> cache = new HashMap<>();
+	private static Logger LOGGER = LoggerFactory.getLogger(AccessLogService.class);
 
 	/**
 	 * Register log.
@@ -44,38 +44,27 @@ public class AccessLogService {
 	 *            HTTP agent
 	 */
 	public void register(Date time, String ip, String request, Integer responseCode, String agentDescription) {
-		try {
-			this.accessLogRepository.insert(time, ip, request, responseCode, getAgentId(agentDescription));
-		} catch (RollbackException e) {
-			System.err.println("Line already processed! Ignoring line.");
-		} catch (SQLException e) {
-			System.err.println("Error saving log data!");
-		}
-	}
-
-	/**
-	 * Get Agent Id for description
-	 * 
-	 * @param agentDescription
-	 * @param conn
-	 * @return
-	 * @throws SQLException
-	 */
-	private Long getAgentId(String agentDescription) throws SQLException {
-		if (!cache.containsKey(agentDescription)) {
-			Long agentId = agentRepository.findIdByDescription(agentDescription);
-			if (agentId != null) {
-				cache.put(agentDescription, agentId);
-			} else {
-				try {
-					cache.put(agentDescription, agentRepository.insert(agentDescription));
-				} catch (RollbackException e) {
-					// nothing! This exception will never be throwed because we look for the
-					// description before
+		try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+			AgentRepository agentRepository = new AgentRepository(session);
+			AccessLogRepository accessLogRepository = new AccessLogRepository(session);
+			Transaction tx = session.beginTransaction();
+			try {
+				AccessLog logInfo = new AccessLog(time, ip, request, responseCode);
+				if (!StringUtils.isEmpty(agentDescription)) {
+					Optional<Agent> agent = agentRepository.find(agentDescription);
+					if (!agent.isPresent()) {
+						agent = Optional.of(new Agent(agentDescription));
+						agentRepository.insert(agent.get());
+					}
+					logInfo.setAgent(agent.get());
 				}
+				accessLogRepository.insert(logInfo);
+				tx.commit();
+			} catch (RollbackException e) {
+				tx.rollback();
+				System.err.println("Line already processed! Ignoring line.");
 			}
 		}
-		return cache.get(agentDescription);
 	}
 
 	/**
@@ -87,14 +76,27 @@ public class AccessLogService {
 	 *            The time window start
 	 * @param threshold
 	 *            The minimum request for blocking
+	 * 
+	 * @return blocked IPs
 	 */
-	public void createBlockedIPs(Date startDate, Date endDate, int threshold) {
-		accessLogRepository.getIPs(startDate, endDate, (long) threshold).forEach(ip -> {
-			try {
-				blockedIPRepository.insert(ip);
-			} catch (RollbackException e) {
-				System.err.println("IP already blocked: " + ip);
-			}
-		});
+	public List<String> createBlockedIPs(Date startDate, Date endDate, int threshold) {
+		try (Session session = HibernateUtil.getSessionFactory().openSession()) {
+			AccessLogRepository accessLogRepository = new AccessLogRepository(session);
+			BlockedIPRepository blockedIPRepository = new BlockedIPRepository(session);
+
+			List<String> ips = accessLogRepository.getIPs(startDate, endDate, (long) threshold);
+			ips.forEach(ip -> {
+				Transaction tx = session.beginTransaction();
+				try {
+					blockedIPRepository.insert(new BlockedIP(ip));
+					tx.commit();
+				} catch (RollbackException e) {
+					tx.rollback();
+					LOGGER.warn("Constraint violation. Rollback.", e);
+					System.err.println("IP already blocked: " + ip);
+				}
+			});
+			return ips;
+		}
 	}
 }

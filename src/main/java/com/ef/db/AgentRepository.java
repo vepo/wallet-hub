@@ -1,6 +1,10 @@
 package com.ef.db;
 
-import com.ef.db.exception.RollbackException;
+import java.util.Optional;
+
+import org.hibernate.Session;
+
+import com.ef.domain.Agent;
 
 /**
  * Repository for Agent
@@ -9,31 +13,13 @@ import com.ef.db.exception.RollbackException;
  *
  */
 public class AgentRepository extends AbstractRepository {
-	/**
-	 * Find Agent id by descriotion
-	 * 
-	 * @param agentDescription
-	 *            the agent description
-	 * @return the agent id
-	 */
-	public Long findIdByDescription(String agentDescription) {
-		return executeQuery("SELECT `id` FROM agent WHERE `description`= ?",
-				statement -> statement.setString(1, agentDescription),
-				resultSet -> resultSet.next() ? resultSet.getLong(1) : null);
+
+	public AgentRepository(Session session) {
+		super(session);
 	}
 
-	/**
-	 * Insert agent
-	 * 
-	 * @param agentDescription
-	 *            the agent description
-	 * @return the agent id
-	 * @throws RollbackException
-	 *             Couldn't add the agent
-	 */
-	public Long insert(String agentDescription) throws RollbackException {
-		return executeInsert("INSERT INTO agent (`description`) VALUES (?)", statement -> {
-			statement.setString(1, agentDescription);
-		});
+	public Optional<Agent> find(String agentDescription) {
+		return session.createQuery("FROM Agent WHERE description = :desc", Agent.class)
+				.setParameter("desc", agentDescription).list().stream().findFirst();
 	}
 }
