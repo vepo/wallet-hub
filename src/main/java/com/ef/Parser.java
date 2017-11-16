@@ -16,6 +16,7 @@ import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ef.db.hibernate.HibernateUtil;
 import com.ef.db.services.AccessLogService;
 import com.ef.params.Duration;
 import com.ef.utils.DateUtils;
@@ -234,8 +235,12 @@ public class Parser {
 	}
 
 	public static void main(String[] args) throws Exception {
-		PropertyConfigurator.configure(Parser.class.getResourceAsStream("/log4j.properties")); // configure log
-		Parser parser = new Parser(args);
-		parser.run();
+		try {
+			PropertyConfigurator.configure(Parser.class.getResourceAsStream("/log4j.properties")); // configure log
+			Parser parser = new Parser(args);
+			parser.run();
+		} finally {
+			HibernateUtil.shutdown();
+		}
 	}
 }

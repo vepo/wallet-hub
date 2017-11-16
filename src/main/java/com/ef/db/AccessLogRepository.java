@@ -3,8 +3,7 @@ package com.ef.db;
 import java.util.Date;
 import java.util.List;
 
-import org.hibernate.Session;
-
+import com.ef.db.hibernate.HibernateUtil;
 import com.ef.domain.AccessLog;
 
 /**
@@ -14,15 +13,25 @@ import com.ef.domain.AccessLog;
  *
  */
 public class AccessLogRepository extends AbstractRepository {
-
-	public AccessLogRepository(Session session) {
-		super(session);
-	}
-
-	public List<String> getIPs(Date startDate, Date endDate, long threshold) {
-		return session.createQuery(
+	/**
+	 * Get all IPs that matches with the parameters:
+	 * <ul>
+	 * <li>Time Window</li>
+	 * <li>Resquest threshold</li>
+	 * </ul>
+	 * 
+	 * @param startTime
+	 *            time window start
+	 * @param endTime
+	 *            time window end
+	 * @param threshold
+	 *            request threshold
+	 * @return IP list
+	 */
+	public List<String> getIPs(Date startTime, Date endTime, long threshold) {
+		return HibernateUtil.query(session -> session.createQuery(
 				"SELECT ip FROM AccessLog WHERE time >= :startTime AND time < :endTime GROUP BY ip HAVING COUNT(ip) >= :threshold",
-				String.class).setParameter("startTime", startDate).setParameter("endTime", endDate)
-				.setParameter("threshold", threshold).list();
+				String.class).setParameter("startTime", startTime).setParameter("endTime", endTime)
+				.setParameter("threshold", threshold).list());
 	}
 }

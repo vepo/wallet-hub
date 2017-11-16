@@ -10,5 +10,7 @@
 		<property name="hibernate.connection.username">log-user</property>
 		<property name="hibernate.connection.password">log-pw</property>
 		<property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
+		<property name="hibernate.current_session_context_class">org.hibernate.context.internal.ThreadLocalSessionContext</property>
+		<property name="hibernate.connection.autocommit">true</property>   
 	</session-factory>
 </hibernate-configuration>

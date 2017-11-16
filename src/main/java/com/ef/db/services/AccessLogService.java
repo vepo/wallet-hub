@@ -29,6 +29,10 @@ public class AccessLogService {
 
 	private static Logger LOGGER = LoggerFactory.getLogger(AccessLogService.class);
 
+	private AccessLogRepository accessLogRepository = new AccessLogRepository();
+	private BlockedIPRepository blockedIPRepository = new BlockedIPRepository();
+	private AgentRepository agentRepository = new AgentRepository();
+
 	/**
 	 * Register log.
 	 * 
@@ -44,9 +48,7 @@ public class AccessLogService {
 	 *            HTTP agent
 	 */
 	public void register(Date time, String ip, String request, Integer responseCode, String agentDescription) {
-		try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-			AgentRepository agentRepository = new AgentRepository(session);
-			AccessLogRepository accessLogRepository = new AccessLogRepository(session);
+		try (Session session = HibernateUtil.getSessionFactory().getCurrentSession()) {
 			Transaction tx = session.beginTransaction();
 			try {
 				AccessLog logInfo = new AccessLog(time, ip, request, responseCode);
@@ -80,12 +82,9 @@ public class AccessLogService {
 	 * @return blocked IPs
 	 */
 	public List<String> createBlockedIPs(Date startDate, Date endDate, int threshold) {
-		try (Session session = HibernateUtil.getSessionFactory().openSession()) {
-			AccessLogRepository accessLogRepository = new AccessLogRepository(session);
-			BlockedIPRepository blockedIPRepository = new BlockedIPRepository(session);
-
-			List<String> ips = accessLogRepository.getIPs(startDate, endDate, (long) threshold);
-			ips.forEach(ip -> {
+		List<String> ips = accessLogRepository.getIPs(startDate, endDate, (long) threshold);
+		ips.forEach(ip -> {
+			try (Session session = HibernateUtil.getSessionFactory().getCurrentSession()) {
 				Transaction tx = session.beginTransaction();
 				try {
 					blockedIPRepository.insert(new BlockedIP(ip));
@@ -95,8 +94,8 @@ public class AccessLogService {
 					LOGGER.warn("Constraint violation. Rollback.", e);
 					System.err.println("IP already blocked: " + ip);
 				}
-			});
-			return ips;
-		}
+			}
+		});
+		return ips;
 	}
 }

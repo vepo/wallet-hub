@@ -2,12 +2,12 @@ package com.ef.db;
 
 import javax.persistence.PersistenceException;
 
-import org.hibernate.Session;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ef.db.exception.RollbackException;
+import com.ef.db.hibernate.HibernateUtil;
 
 /**
  * Abstract repository
@@ -17,26 +17,18 @@ import com.ef.db.exception.RollbackException;
  */
 public abstract class AbstractRepository {
 	private static Logger LOGGER = LoggerFactory.getLogger(AbstractRepository.class);
-	protected Session session;
-
-	public AbstractRepository(Session session) {
-		this.session = session;
-	}
 
 	/**
 	 * Execute database Insert.
 	 * 
-	 * @param sql
-	 *            The insert SQL statement
-	 * @param fn
-	 *            set statement parameters function
-	 * @return the last inserted id
+	 * @param obj
+	 *            The new object
 	 * @throws RollbackException
-	 *             Couldn't insert into table. Constraint violation.
+	 *             Couldn't insert object. Constraint violation.
 	 */
 	public <T> void insert(T obj) throws RollbackException {
 		try {
-			session.persist(obj);
+			HibernateUtil.getSessionFactory().getCurrentSession().persist(obj);
 		} catch (ConstraintViolationException e) {
 			throw new RollbackException(e);
 		} catch (PersistenceException e) {
@@ -53,15 +45,13 @@ public abstract class AbstractRepository {
 	/**
 	 * Execute database Update.
 	 * 
-	 * @param sql
-	 *            The SQL update statement
-	 * @param fn
-	 *            set statement parameters function
+	 * @param obj
+	 *            Object to update
 	 * @throws RollbackException
-	 *             Couldn't insert into table. Constraint violation.
+	 *             Couldn't update object. Constraint violation.
 	 */
 	protected <T> void update(T obj) throws RollbackException {
-		session.merge(obj);
+		HibernateUtil.getSessionFactory().getCurrentSession().merge(obj);
 	}
 
 }

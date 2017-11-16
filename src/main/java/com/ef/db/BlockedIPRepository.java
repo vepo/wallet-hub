@@ -1,7 +1,5 @@
 package com.ef.db;
 
-import org.hibernate.Session;
-
 /**
  * BlockedIP Repository
  * 
@@ -9,9 +7,5 @@ import org.hibernate.Session;
  *
  */
 public class BlockedIPRepository extends AbstractRepository {
-
-	public BlockedIPRepository(Session session) {
-		super(session);
-	}
 
 }

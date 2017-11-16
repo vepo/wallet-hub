@@ -2,8 +2,7 @@ package com.ef.db;
 
 import java.util.Optional;
 
-import org.hibernate.Session;
-
+import com.ef.db.hibernate.HibernateUtil;
 import com.ef.domain.Agent;
 
 /**
@@ -13,13 +12,16 @@ import com.ef.domain.Agent;
  *
  */
 public class AgentRepository extends AbstractRepository {
-
-	public AgentRepository(Session session) {
-		super(session);
-	}
-
-	public Optional<Agent> find(String agentDescription) {
-		return session.createQuery("FROM Agent WHERE description = :desc", Agent.class)
-				.setParameter("desc", agentDescription).list().stream().findFirst();
+	/**
+	 * Find agent by description
+	 * 
+	 * @param description
+	 *            agent description
+	 * @return the database agent
+	 */
+	public Optional<Agent> find(String description) {
+		return HibernateUtil.getSessionFactory().getCurrentSession()
+				.createQuery("FROM Agent WHERE description = :desc", Agent.class).setParameter("desc", description)
+				.list().stream().findFirst();
 	}
 }

@@ -2,6 +2,12 @@ package com.ef.utils;
 
 import java.util.Date;
 
+/**
+ * Date utils class
+ * 
+ * @author victor
+ *
+ */
 public class DateUtils {
 	private static final long ONE_MINUTE_IN_MILLIS = 60000;// milliseconds
 
