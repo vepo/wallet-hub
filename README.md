@@ -9,6 +9,7 @@ This implementation follow [this requirements](Java_MySQL_Test_Instructions.md).
 # Table of Contents
 
    * [Dependencies](#dependencies)
+   * [Architecture choices](#architecture-choices)
    * [Build](#build)
       * [Executable](#executable)
       * [Infrastructure](#infrastructure)
@@ -24,6 +25,14 @@ This implementation follow [this requirements](Java_MySQL_Test_Instructions.md).
 * Maven
 * Docker
 * Docker-compose
+
+# Architecture choices
+
+I choose use in this implementation only Hibernate.
+
+Using [Spribg boot](https://github.com/vepo/wallet-hub/tree/spring-boot), I cannot run the jar file as required.
+
+[No using Hibernate](https://github.com/vepo/wallet-hub/tree/without-hibernate), it was only 7% faster than using Hibernate. So it is preferred a solution using Hibernate with a build integrated unit test solution using JUnit and HSQLDB.
 
 # Build
 
