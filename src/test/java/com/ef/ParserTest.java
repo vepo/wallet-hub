@@ -11,7 +11,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.ef.db.hibernate.HibernateUtil;
-import com.ef.db.services.AccessLogService;
+import com.ef.services.AccessLogService;
 import com.ef.utils.DateUtils;
 
 public class ParserTest {
@@ -78,8 +78,5 @@ public class ParserTest {
 					"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Mobile Safari/537.36");
 
 		}
-		accessLogService.createBlockedIPs(DateUtils.oneHourBefore(), DateUtils.oneHourAfter(), 3);
-
-		accessLogService.createBlockedIPs(DateUtils.oneHourBefore(), DateUtils.oneHourAfter(), 3);
 	}
 }

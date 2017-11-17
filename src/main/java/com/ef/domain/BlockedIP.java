@@ -1,6 +1,5 @@
 package com.ef.domain;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -29,7 +28,9 @@ public class BlockedIP {
 	private Long id;
 
 	@NonNull
-	@Column(unique = true)
 	private String ip;
+
+	@NonNull
+	private String comments;
 
 }

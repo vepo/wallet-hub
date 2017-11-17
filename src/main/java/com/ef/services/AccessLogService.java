@@ -1,5 +1,7 @@
-package com.ef.db.services;
+package com.ef.services;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +34,7 @@ public class AccessLogService {
 	private AccessLogRepository accessLogRepository = new AccessLogRepository();
 	private BlockedIPRepository blockedIPRepository = new BlockedIPRepository();
 	private AgentRepository agentRepository = new AgentRepository();
+	private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd.HH:mm:ss");
 
 	/**
 	 * Register log.
@@ -87,7 +90,8 @@ public class AccessLogService {
 			try (Session session = HibernateUtil.getSessionFactory().getCurrentSession()) {
 				Transaction tx = session.beginTransaction();
 				try {
-					blockedIPRepository.insert(new BlockedIP(ip));
+					blockedIPRepository.insert(new BlockedIP(ip, String.format("More than %d access between %s and %s",
+							threshold, DATE_FORMAT.format(startDate), DATE_FORMAT.format(endDate))));
 					tx.commit();
 				} catch (RollbackException e) {
 					tx.rollback();

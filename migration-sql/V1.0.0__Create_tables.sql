@@ -17,9 +17,8 @@ CREATE TABLE log_access (
 );
 
 CREATE TABLE ip_blocked (
-	`id` SERIAL,
-	`ip` VARCHAR(15) NOT NULL,
-	PRIMARY KEY(`id`),
-	UNIQUE (`ip`),
-	INDEX `idx_ip` (`ip`)
+	`id`       SERIAL,
+	`ip`       VARCHAR(15) NOT NULL,
+	`comments` VARCHAR(512) NOT NULL,
+	PRIMARY KEY(`id`)
 );

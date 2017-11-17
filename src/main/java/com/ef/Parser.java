@@ -17,8 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ef.db.hibernate.HibernateUtil;
-import com.ef.db.services.AccessLogService;
 import com.ef.params.Duration;
+import com.ef.services.AccessLogService;
 import com.ef.utils.DateUtils;
 
 /**
